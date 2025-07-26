@@ -1,88 +1,110 @@
 #!/bin/bash
 
-# Gym Management System - Ubuntu 24.04 LTS Installer
+# Complete Gym Management System Installer (Frontend + Backend + Database)
 # Repository: https://github.com/kaustubh6199/gym-flow-master.git
 
-echo "🏋️  Installing Gym Management System..."
+echo "🏋️  Installing Complete Gym Management System..."
+echo "📋 This will install: Frontend + Backend API + PostgreSQL Database"
 
 # Update system
 echo "📦 Updating system packages..."
 sudo apt update && sudo apt upgrade -y
 
-# Install Node.js 20
+# Install Docker and Docker Compose
+echo "🐳 Installing Docker and Docker Compose..."
+sudo apt install -y apt-transport-https ca-certificates curl software-properties-common
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+
+# Add user to docker group
+sudo usermod -aG docker $USER
+
+# Install Node.js (for development)
 echo "📦 Installing Node.js 20..."
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt-get install -y nodejs git
 
-# Install Nginx (optional for reverse proxy)
-echo "📦 Installing Nginx..."
-sudo apt install -y nginx
-
-# Clone your repository
+# Clone repository
 echo "📦 Cloning gym-flow-master repository..."
 git clone https://github.com/kaustubh6199/gym-flow-master.git
 cd gym-flow-master
 
-# Install dependencies
-echo "📦 Installing project dependencies..."
+# Setup backend dependencies
+echo "📦 Setting up backend..."
+cd backend
 npm install
+cd ..
 
-# Build the project
-echo "🔨 Building the project..."
-npm run build
+# Create environment file
+echo "⚙️  Creating environment configuration..."
+cat > .env << EOF
+# Database Configuration
+DATABASE_URL=postgresql://gym_admin:gym_secure_2024@localhost:5432/gym_management
 
-# Install PM2 for process management
-echo "📦 Installing PM2..."
-sudo npm install -g pm2
+# JWT Secret (change this in production!)
+JWT_SECRET=your_super_secure_jwt_secret_key_change_this_in_production
 
-# Start the application
-echo "🚀 Starting gym management system..."
-pm2 start "npx serve -s dist -l 3000" --name gym-management
-pm2 save
-pm2 startup
+# Frontend URL
+FRONTEND_URL=http://localhost:3000
 
-# Configure Nginx (optional)
-echo "⚙️  Configuring Nginx..."
-sudo tee /etc/nginx/sites-available/gym-management << EOF
-server {
-    listen 80;
-    server_name your-domain.com;
-
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_cache_bypass \$http_upgrade;
-    }
-}
+# API Port
+PORT=3001
 EOF
 
-# Enable the site
-sudo ln -s /etc/nginx/sites-available/gym-management /etc/nginx/sites-enabled/
-sudo nginx -t && sudo systemctl reload nginx
+# Start the complete system with Docker
+echo "🚀 Starting complete gym management system..."
+sudo docker compose up -d
+
+# Wait for services to start
+echo "⏳ Waiting for services to initialize..."
+sleep 30
 
 # Configure firewall
 echo "🔥 Configuring firewall..."
-sudo ufw allow 'Nginx Full'
+sudo ufw allow 80
+sudo ufw allow 443
 sudo ufw allow 22
+sudo ufw allow 3000
+sudo ufw allow 3001
+sudo ufw allow 5432
 sudo ufw --force enable
 
 echo "✅ Installation complete!"
 echo ""
-echo "🎉 Your Gym Management System is now running!"
-echo "🌐 Local access: http://localhost:3000"
-echo "🌐 Public access: http://your-server-ip"
+echo "🎉 Your Complete Gym Management System is now running!"
 echo ""
-echo "📊 Useful commands:"
-echo "   pm2 status           - Check application status"
-echo "   pm2 logs gym-management - View logs"
-echo "   pm2 restart gym-management - Restart app"
-echo "   pm2 stop gym-management - Stop app"
+echo "🌐 Access Points:"
+echo "   Frontend:     http://localhost:3000"
+echo "   Backend API:  http://localhost:3001"
+echo "   Database:     localhost:5432"
 echo ""
-echo "💡 To use a custom domain, update /etc/nginx/sites-available/gym-management"
-echo "   and point your domain's DNS to this server's IP address"
+echo "🔐 Default Login Credentials:"
+echo "   Email:        admin@gym.com"
+echo "   Password:     admin123"
+echo ""
+echo "📊 Useful Docker commands:"
+echo "   docker compose ps                 - Check service status"
+echo "   docker compose logs               - View all logs"
+echo "   docker compose logs frontend      - View frontend logs"
+echo "   docker compose logs backend       - View backend logs"
+echo "   docker compose restart            - Restart all services"
+echo "   docker compose down               - Stop all services"
+echo "   docker compose up -d              - Start all services"
+echo ""
+echo "🗄️  Database Access:"
+echo "   Host:     localhost"
+echo "   Port:     5432"
+echo "   Database: gym_management"
+echo "   Username: gym_admin"
+echo "   Password: gym_secure_2024"
+echo ""
+echo "⚠️  SECURITY NOTES:"
+echo "   - Change default passwords before production use"
+echo "   - Update JWT_SECRET in .env file"
+echo "   - Configure SSL/TLS for production"
+echo "   - Set up proper backup strategy"
+echo ""
+echo "📚 API Documentation will be available at:"
+echo "   http://localhost:3001/health - API health check"
